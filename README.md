@@ -20,7 +20,7 @@ It also contains standard (TCGA) abbreviations and color codes for the samples.
 
 ### Support or Contact
 
-Please contact Arian Lundberg : **arlundbg@stanford.edu** if you have any furthur questions. 
+Please contact Arian Lundberg : **arian.lundberg@ucsf.edu** if you have any furthur questions. 
 
 Sincerely,
 Arian Lundberg
