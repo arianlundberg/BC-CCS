@@ -15,12 +15,12 @@ Lundberg et al. are available in "~/RCodes/"
 have ExpressionSet data (eSet.CCS: subset of data to only include CCS genes, eSet.Data: used to identify most variable genes, eSet.noTestis: data after exclusion of Testis samples, eSet.final: all the data after final exclusions, cc.Genes: cell-cycle score genes), for the analyses in this project; the data was obtained from 
 https://xenabrowser.net/datapages/?hub=https://toil.xenahubs.net:443 
 
-It also contains standard (TCGA) abbreviations and color codes for the samples.
+It also contains standard TCGA abbreviations and color codes for the samples.
 
 
 ### Support or Contact
 
-Please contact Arian Lundberg : **arian.lundberg@ucsf.edu** if you have any furthur questions. 
+Please contact Arian Lundberg: **arian.lundberg@ucsf.edu** if you have any furthur questions. 
 
 Sincerely,
 Arian Lundberg
