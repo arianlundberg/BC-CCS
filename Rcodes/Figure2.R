@@ -16,10 +16,10 @@ variable.genes <- rownames(variable.genes.data)
 
 
 ########
-# script to generate Figure 1 (not Consort here) - Supplemental Figure 1
+# script to generate Figure 2 (not Consort here)
 ########
 
-## PCA the data with outliers (testis samples, majority of them were outliers - all normal testis and two tumours) - Variable genes (Figure 1A)
+## PCA the data with outliers (testis samples, majority of them were outliers - all normal testis and two tumours) - Variable genes (Figure 2A)
 set.seed(1363)
 PCA_variable <- gmodels::fast.prcomp(x = t(variable.genes.data))
 PCA_variable.data <- as.data.frame(PCA_variable$x)
@@ -48,7 +48,7 @@ plot.study.colors <- eSet.Data$PCA.tag
 ########
 
 ########
-# Figure 1A - Variable genes with outlier
+# Figure 2A - Variable genes with outlier
 
 PCA.variable.study.plot <- ggplot(PCA_variable.data ,aes(x=PC1,y=PC2)) +
     geom_point(aes(color=(plot.study.colors)),size=0.2,alpha=0.7) + scale_color_jama(name = 'Study origin')+
@@ -64,7 +64,7 @@ PCA.variable.study.plot <- ggplot(PCA_variable.data ,aes(x=PC1,y=PC2)) +
 PCA.colors.studies <- pal_jama()(3)[eSet.Data$PCA.tag]
 PCA.colors.studies[as.numeric(which(PCA.outliers.idx))] <- 'red'
 
-#Figure 1A - PCA 3D plot
+#Figure 2A - PCA 3D plot
 
 scatterplot3d::scatterplot3d(PCA_variable$x[,1:3],color = PCA.colors.studies,pch = 16, grid=TRUE, box=FALSE,type = 'p',angle = -35,cex.symbols = 0.5,
                              xlab =paste0("PC1: ",round(dev.variable[1]*100,1),"%"),
@@ -75,7 +75,7 @@ scatterplot3d::scatterplot3d(PCA_variable$x[,1:3],color = PCA.colors.studies,pch
 
 ########
 
-## PCA the data - outliers removed - Variable genes (Figure 1 C,D)
+## PCA the data - outliers removed - Variable genes (Figure 2 C,D)
 
 set.seed(1363)
 PCA_variable.noOutlier <- gmodels::fast.prcomp(x = t(variable.genes.noOutlier.data))
@@ -91,7 +91,7 @@ plot.tissue.noOutlier.colors <- eSet.final$primary_site_relevel
 
 
 ########
-# Figure 1B,C - Variable genes
+# Figure 2B,C - Variable genes
 
 PCA.variable.noOutlier.tissue.plot <- ggplot(PCA_variable.noOutlier.data ,aes(x=PC1,y=PC2)) +
     geom_point(aes(color=(plot.tissue.noOutlier.colors)),size=0.2,alpha=0.7) + scale_color_manual(name='Tissue type',values = Tissue.color$tissue.colors)+
@@ -107,7 +107,7 @@ PCA.variable.noOutlier.study.plot <- ggplot(PCA_variable.noOutlier.data ,aes(x=P
                                                             x=paste0("PC1: ",round(dev.variable.noOutlier[1]*100,1),"%"),
                                                             y=paste0("PC2: ",round(dev.variable.noOutlier[2]*100,1),"%"))
 
-###  Figure 1B-C - PCA 3D plots
+###  Figure 2B-C - PCA 3D plots
 
 PCA.colors.noOutlier.studies <- pal_jama()(3)[eSet.final$PCA.tag]
 PCA.colors.noOutlier.tissues <- eSet.final$tissue.colors
@@ -128,7 +128,7 @@ scatterplot3d::scatterplot3d(PCA_variable.noOutlier$x[,1:3],color = PCA.colors.n
 
 ########
 
-# Figure 1D, CCS
+# Figure 2D, CCS
 
 CCS.genes.data <- exprs(eSet.CCS)
 
@@ -185,7 +185,7 @@ scatterplot3d::scatterplot3d(PCA_CCS$x[,c(1,3,2)],color = PCA.colors.CCS.studies
 # removing extra outliers - 24 samples based on PCA - CCS
 ######
 
-# Figure 1E-1F, CCS
+# Figure 2E-1F, CCS
 
 CCS.final.genes.data <- exprs(eSet.CCS.final)
 
@@ -216,7 +216,7 @@ PCA.CCS.final.tissue.plot <- ggplot(PCA_CCS.final.data ,aes(x=PC1,y=PC2)) +
 # UMAPs
 ########
 #UMAP - CCS
-# Figure 1G, H, I
+# Figure 2G, H, I
 
 
 Exprs_CCS.noOut <- merge(t(exprs(eSet.CCS.final)),pData(eSet.CCS.final)[c('CCS_ct','primary_site_relevel','PCA.tag')],all.x=T,sort=F,by='row.names')
@@ -241,12 +241,12 @@ umap.CCS.range.plot <- umap(t(Exprs_CCS.noOut[,-c(448:450)]),labels=Exprs_CCS.no
 
 
 ###############
-# FIGURE 1
+# Figure 2
 # generate figures
 ###############
 
 
-plot.legends.Fig1 <- plot_grid(get_legend(umap.CCS.tissue.plot + guides(colour = guide_legend(override.aes = list(size=5),nrow = 7))+
+plot.legends.Fig2 <- plot_grid(get_legend(umap.CCS.tissue.plot + guides(colour = guide_legend(override.aes = list(size=5),nrow = 7))+
                                               theme(legend.position = 'bottom',legend.title =element_text(size=9,face='bold'),legend.text =element_text(size=7),legend.direction = 'vertical')),
                                get_legend(umap.CCS.study.plot + guides(colour = guide_legend(override.aes = list(size=5),nrow = 7))+
                                               theme(legend.position = 'bottom',legend.title =element_text(size=9,face='bold'),legend.text =element_text(size=7),legend.direction = 'vertical')),
@@ -254,18 +254,18 @@ plot.legends.Fig1 <- plot_grid(get_legend(umap.CCS.tissue.plot + guides(colour =
                                               theme(legend.position = 'bottom',legend.title =element_text(size=9,face='bold'),legend.text =element_text(size=7),legend.direction = 'vertical')),
                                ncol = 3,axis='tblr',rel_widths = c(0.5,0.5,0.5))
 
-#### figure 1 layout
-Figure1 <- plot_grid(
-                     PCA.variable.study.plot + theme(legend.position = 'none'), # Fig 1A
-                     PCA.variable.noOutlier.study.plot + theme(legend.position = 'none'), # Fig 1B
-                     PCA.variable.noOutlier.tissue.plot + theme(legend.position = 'none'), # Fig 1C
-                     PCA.CCS.study.plot + theme(legend.position = 'none'), # Fig 1D
-                     PCA.CCS.final.study.plot + theme(legend.position = 'none'), # Fig 1E
-                     PCA.CCS.final.tissue.plot + theme(legend.position = 'none'), # Fig 1F
-                     umap.CCS.study.plot + theme(legend.position = 'none'), # Fig 1F
-                     umap.CCS.tissue.plot + theme(legend.position = 'none'), # Fig 1G
-                     umap.CCS.range.plot + theme(legend.position = 'none'), # Fig 1H
-                     plot.legends.Fig1,                     # legends
+#### Figure 2 layout
+Figure2 <- plot_grid(
+                     PCA.variable.study.plot + theme(legend.position = 'none'), # Fig2A
+                     PCA.variable.noOutlier.study.plot + theme(legend.position = 'none'), # Fig2B
+                     PCA.variable.noOutlier.tissue.plot + theme(legend.position = 'none'), # Fig2C
+                     PCA.CCS.study.plot + theme(legend.position = 'none'), # Fig2D
+                     PCA.CCS.final.study.plot + theme(legend.position = 'none'), # Fig2E
+                     PCA.CCS.final.tissue.plot + theme(legend.position = 'none'), # Fig2F
+                     umap.CCS.study.plot + theme(legend.position = 'none'), # Fig2F
+                     umap.CCS.tissue.plot + theme(legend.position = 'none'), # Fig2G
+                     umap.CCS.range.plot + theme(legend.position = 'none'), # Fig2H
+                     plot.legends.Fig2,                     # legends
 
 
                      labels =c('A','B','C','D',
