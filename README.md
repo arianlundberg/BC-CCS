@@ -25,7 +25,7 @@ also PAM50 subtypes: generated on cBioportal
 
 
 
-### Support or Contact
+### Contact
 
 Please contact Arian Lundberg: **arian.lundberg@ucsf.edu** if you have any furthur questions. 
 
