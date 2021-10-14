@@ -1,6 +1,6 @@
 # loading required data
 ######
-load(file="~/Box Sync/Karolinska/Projects/CCS_2020/munge/Github/manuscript_data.RData")
+load(file="~/manuscript_data.RData")
 
 ### functions
 corrFunc <- function(var1,var2,data){

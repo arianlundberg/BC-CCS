@@ -1,6 +1,6 @@
 ## loading required data
 ######
-load(file="~/Box Sync/Karolinska/Projects/CCS_2020/munge/Github/manuscript_data.RData")
+load(file="~/manuscript_data.RData")
 
 ### select genes with higher correlation +/-0.3
 high.corr.genes <-corrs.order[abs(corrs.order$estimate)>0.3,]
@@ -144,9 +144,8 @@ decorate_annotation("Pearson's r", {
                default.units = "native")
 })
 
-anneuploidy.score <- fread(file="~/Box Sync/Karolinska/Projects/CCS_2020/data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt",data.table = F)
 
-## top 5 amp/del locations
+### selecting top 5 amp/del locations
 top_locs <- data.frame(chr=c('3q','1q','5p','6p','2p',
                              '16q','8p','9q','22 (22q)','4q'),color=c(rep('firebrick3',5),rep('gold',5)))
 
