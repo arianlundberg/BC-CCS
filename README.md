@@ -19,7 +19,7 @@ https://xenabrowser.net/datapages/?hub=https://toil.xenahubs.net:443
 
 It also contains standard TCGA abbreviations and color codes for the samples and
 
-annuploidy score (Aneuploidy scores and arm calls file - PANCAN_ArmCallsAndAneuploidyScore_092817.txt) which downloaded from: https://gdc.cancer.gov/about-data/publications/pancan-aneuploidy
+annuploidy score (Aneuploidy scores and arm calls file - PANCAN_ArmCallsAndAneuploidyScore_092817.txt): https://gdc.cancer.gov/about-data/publications/pancan-aneuploidy
 
 as well as tumour purity data: https://gdc.cancer.gov/about-data/publications/pancanatlas
 
