@@ -9,7 +9,7 @@ All R codes (R statistical software version 4.1.0) to reproduce main figures of
 "Manuscript title" 
 Lundberg et al. are available in "~/RCodes/"
 
-**The following RData files were used in the codes.**
+**The following files were used in the codes.**
  
 ### manuscript_data.RData 
 This file is accessible on Dropbox https://www.dropbox.com/sh/2suqtrq6ore9hpy/AACDeYnE4Riz5Hcsva6gynIfa?dl=0
