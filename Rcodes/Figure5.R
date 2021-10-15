@@ -1,6 +1,7 @@
 ## loading required data
 ######
 load(file="~/manuscript_data.RData")
+source(file = "~/functions.R")
 
 ### select genes with higher correlation +/-0.3
 high.corr.genes <-corrs.order[abs(corrs.order$estimate)>0.3,]

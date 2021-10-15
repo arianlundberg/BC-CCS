@@ -1,4 +1,5 @@
 load(file="~/manuscript_data.RData")
+source(file = "~/functions.R")
 
 ######## finding variable genes
 
@@ -6,7 +7,6 @@ variable.genes.data <- exprs(eSet.Data)
 
 #### choosing the genes that have highest coefficient of variation (most variable genes)
 
-compute_cv <- function(x) sd(x) / mean(x)
 cv <- apply(variable.genes.data, 1, compute_cv)
 
 variable.genes.data <- variable.genes.data[rank(cv) / length(cv) > 1 - 0.25, ]

@@ -1,13 +1,7 @@
 # loading required data
 ######
 load(file="~/manuscript_data.RData")
-
-### functions
-corrFunc <- function(var1,var2,data){
-    result=cor.test(data[,var1],data[,var2],method='spearman')
-    data.frame(var1, var2, result[c("estimate","p.value","statistic","method")],
-               stringsAsFactors=FALSE)
-}
+source(file = "~/functions.R")
 
 
 #######
