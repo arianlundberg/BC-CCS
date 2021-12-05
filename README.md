@@ -26,7 +26,7 @@ as well as tumour purity data: https://gdc.cancer.gov/about-data/publications/pa
 also PAM50 subtypes: retrieved from cBioportal
 
 
-### Contact
+### Contact info
 
 Please contact Arian Lundberg: **arian.lundberg@ucsf.edu** if you have any furthur questions. 
 
