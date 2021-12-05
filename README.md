@@ -1,6 +1,6 @@
 # BC-CCS
 
-## "Manuscript title" 
+## "Reclassifying Cancer: Defining tumour cell cycle activity in terms of its tissue of origin in over 13,000 samples" 
 ### Link to the manuscript Lundberg et al.
 
 ### Written by ARIAN LUNDBERG 
