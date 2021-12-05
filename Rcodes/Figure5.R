@@ -1,247 +1,216 @@
 ## loading required data
 ######
-load(file="~/manuscript_data.RData")
-source(file = "~/functions.R")
-
-### select genes with higher correlation +/-0.3
-high.corr.genes <-corrs.order[abs(corrs.order$estimate)>0.3,]
-#"ADRB2"     "EPCAM"     "MELTF"     "MEX3A"     "PLEKHG4"   "LINC01224" "ZNF93"     "RAD9B"     "E2F7"      "TCF19"     "C19orf57"
-
-eset.high.corr <- eSet.final[rownames(eSet.final)%in%high.corr.genes$var2,eSet.final$twoType%in% 'Tumour']
-pData(eset.high.corr) <- pData(eset.high.corr)[c('twoClass.code','tissue.colors','CCS')]
-pData(eset.high.corr) <- merge(pData(eset.high.corr),CCS_relative.df[c('CCS_change','rownames')],by.x='row.names',by.y='rownames',sort=F,all.x=T)
-rownames(pData(eset.high.corr)) <- eset.high.corr$Row.names;pData(eset.high.corr) <- pData(eset.high.corr)[,-1]
-eset.high.corr$CCS_change.log2 <- log2(eset.high.corr$CCS_change)
-eset.high.corr$groups <- as.factor(ifelse(eset.high.corr$twoClass.code %in% c("HNSC", "KICH", "KIRP", "UCEC"),'Group 1',
-                                          ifelse(eset.high.corr$twoClass.code %in% c("CESC", "OV", "UCS"),'Group 2',NA)))
-
-### generate the corr score - negative correlation * -1
-
-corr.exprs <- eSet.final[match(high.corr.genes$var2,rownames(eSet.final)),eSet.final$twoType%in% 'Tumour']
-#### eset of only 2groups
-
-eset.high.corr.2group <- eset.high.corr[,!is.na(eset.high.corr$groups)]
-
-#### reorder matrix based on groups
-
-pData(eset.high.corr.2group) <- with(pData(eset.high.corr.2group), pData(eset.high.corr.2group)[order(groups),])
-exprs(eset.high.corr.2group) <- exprs(eset.high.corr.2group)[,rownames(pData(eset.high.corr.2group))]
-
-colData.heatmap.2group <- data.frame(groups=eset.high.corr.2group$groups,
-                                     Cancer.type=as.character(eset.high.corr.2group$twoClass.code),
-                                     CCS=as.character(eset.high.corr.2group$CCS),
-                                     CCS_relative=rescale(eset.high.corr.2group$CCS_change.log2,to = c(0,100)))
-colData.heatmap.2group$CCS <- factor(colData.heatmap.2group$CCS,labels = c('Low','Inter','High'))
-
-tmp <- rbind.data.frame(ARDB2=exprs(eset.high.corr.2group)[which(rownames(eset.high.corr.2group)=='ADRB2'),]*-1,exprs(eset.high.corr.2group)[which(rownames(eset.high.corr.2group)!='ADRB2'),])
-eset.high.corr.2group$corr.score <- colSums(tmp)
-
-### determining the best cutpoint based on maximizes the product of Sensitivity and Specificity or Accuracy Area
-
-cutpoint_C3 <- OptimalCutpoints::optimal.cutpoints(data=pData(eset.high.corr.2group),X = 'corr.score' ,methods='MaxProdSpSe',status ='groups',tag.healthy = 'Group 2')
-cutpoint_C3 <- cutpoint_C3$MaxProdSpSe$Global$optimal.cutoff$cutoff
-
-colData.heatmap.2group$corr.score.bin <- as.factor(ifelse(eset.high.corr.2group$corr.score > cutpoint_C3,1,0))
-
-### generating CC core score based on the genes with high correlation value in the whole samples
-
-tmp.all <- rbind.data.frame(ARDB2=exprs(eset.high.corr)[which(rownames(eset.high.corr)=='ADRB2'),]*-1,exprs(eset.high.corr)[which(rownames(eset.high.corr)!='ADRB2'),])
-
-eset.high.corr$corr.score <- colSums(tmp.all)
-
-### using two groups cut-point to binarize the data in all samples
-eset.high.corr$corr.score.bin <- as.factor(ifelse(eset.high.corr$corr.score > cutpoint_C3,1,0))
-
-CCS_relative.color = circlize::colorRamp2(seq(0, 100, by=1), (plasma(101)))
-
-Data_col.heatmap.2group = list('Cancer types'=c("ACC"="#C1A72F","BLCA"="#FAD2D9","LGG"="#D49DC7","GBM"="#D49DC7",
-                                                "BRCA"="#ED2891","CESC"="#F6B667","COAD"="#9EDDF9","UCEC"="#FBE3C7",
-                                                "ESCA"="#007EB5","HNSC"="#97D1A9","KICH"="#ED1C24","KIRC"="#ED1C24","KIRP"="#ED1C24","LIHC"="#CACCDB",
-                                                "LUAD"="#D3C3E0","LUSC"="#D3C3E0","OV"="#D97D25","PAAD"="#6E7BA2","PRAD"="#7E1918","SKCM"="#BBD642",
-                                                "STAD"="#00AEEF","THCA"="#F9ED32","UCS"="#F89420"),
-                               Groups=c("Group 1"="tomato4","Group 2"='#F89420'),
-                               'C3 score'=c('Low'='gray29','High'='gray87'),
-                               'CCS relative'=CCS_relative.color,
-                               CCS=c("Low"="Black","Inter"="gray","High"="gold"))
-
-exprs.data.2group <- as.matrix(eset.high.corr.2group)
+load(file="~/Box Sync/Karolinska/Projects/CCS_2020/munge/Github/Gene.expression_data.RData")
+load(file="~/Box Sync/Karolinska/Projects/CCS_2020/munge/Github/mutations_data.RData")
+source(file="~/Box Sync/Karolinska/Projects/CCS_2020/munge/Github/functions.R")
 
 #######
-colData.annot.2group = HeatmapAnnotation('Cancer types' = colData.heatmap.2group$Cancer.type,
-                                         'CCS relative'=colData.heatmap.2group$CCS_relative,
-                                         'C3 score' =ifelse(colData.heatmap.2group$corr.score.bin=='0','Low','High'),
-                                         col = Data_col.heatmap.2group,show_legend =T,show_annotation_name = F,na_col='white',
-                                         annotation_legend_param = list('CCS relative' = list(
-                                             title = "CCS relative",direction='horizontal',
-                                             at = seq(0,100,by=10),
-                                             labels = seq(0,100,by=10)),
-                                             'Cancer types'=list(ncol=3,title='Cancer types')))
+
+# Figure5 - A
+# Boxplots
+#######
+
+MDSIG <- msigdbr(species = 'Homo sapiens',category = 'C5')
+ER_module <- subset(MDSIG,subset=MDSIG$gs_name=='GOMF_ESTROGEN_RECEPTOR_ACTIVITY')$gene_symbol
+PR_module <- subset(MDSIG,subset=MDSIG$gs_name=='GOBP_PROGESTERONE_RECEPTOR_SIGNALING_PATHWAY')$gene_symbol
+AR_module <- subset(MDSIG,subset=MDSIG$gs_name=='GOBP_ANDROGEN_RECEPTOR_SIGNALING_PATHWAY')$gene_symbol
+
+### boxplot ER PR and AR comparison
+G1.exprs <- exprs(eSet_CC.Group1.complete)
+G2.exprs <- exprs(eSet_CC.Group2.complete)
+G1.ERAR.PR.AR <- data.frame(t(G1.exprs[c('ESR1','PGR','AR'),]),Group='G1')
+G2.ERAR.PR.AR <- data.frame(t(G2.exprs[c('ESR1','PGR','AR'),]),Group='G2')
+G1.G2.bp.data <- rbind(G1.ERAR.PR.AR,G2.ERAR.PR.AR)
+G1.G2.bp.data <- data.frame(scale(G1.G2.bp.data[,-4]),Group=G1.G2.bp.data$Group)
+
+#### gene modules
+module.df.G1 <- data.frame(ER.corr=rowSums(t(G1.exprs[rownames(G1.exprs)%in%ER_module,])),
+                           PR.corr=rowSums(t(G1.exprs[rownames(G1.exprs)%in%PR_module,])),
+                           AR.corr=rowSums(t(G1.exprs[rownames(G1.exprs)%in%AR_module,])),Group='G1')
+module.df.G2 <- data.frame(ER.corr=rowSums(t(G2.exprs[rownames(G2.exprs)%in%ER_module,])),
+                           PR.corr=rowSums(t(G2.exprs[rownames(G2.exprs)%in%PR_module,])),
+                           AR.corr=rowSums(t(G2.exprs[rownames(G2.exprs)%in%AR_module,])),Group='G2')
+
+module.df <- rbind(module.df.G1,module.df.G2)
+module.df <- data.frame(scale(module.df[,-4]),Group=module.df$Group)
+
+new_labels <- c("ER.corr" = "ER module", "PR.corr" = "PR module", "AR.corr" = "AR module")
+
+ER.PR.AR.bp <- ggboxplot(data = melt(G1.G2.bp.data),x ='Group',y='value',facet.by = 'Group',ggtheme = theme_few(),
+                         bxp.ERARrorbar = T,bxp.ERARrorbar.width = 0.08,ylab = 'Expression level',size = 0.25,outlier.size=0.7,
+                         fill='Group',color='black',palette = c('skyblue1','yellow'))+facet_grid(~variable)+
+    stat_compare_means(comparisons = list(c('G1','G2')),label = 'p.signif')+theme(legend.key.size = unit(1, 'cm'))+coord_cartesian(ylim = c(-4,4))
 
 
-##### all other cancers
-
-eset.high.corr.all_others <- eset.high.corr[,is.na(eset.high.corr$groups)]
-tmp.all_others <- rbind.data.frame(ARDB2=exprs(eset.high.corr.all_others)[which(rownames(eset.high.corr.all_others)=='ADRB2'),]*-1,exprs(eset.high.corr.all_others)[which(rownames(eset.high.corr.all_others)!='ADRB2'),])
-eset.high.corr.all_others$corr.score <- colSums(tmp.all_others)
-
-#### reorder matrix based on groups
-
-pData(eset.high.corr.all_others) <- with(pData(eset.high.corr.all_others), pData(eset.high.corr.all_others)[order(twoClass.code),])
-exprs(eset.high.corr.all_others) <- exprs(eset.high.corr.all_others)[,rownames(pData(eset.high.corr.all_others))]
-colData.heatmap.all_others <- data.frame(Cancer.type=as.character(eset.high.corr.all_others$twoClass.code),
-                                         CCS=as.character(eset.high.corr.all_others$CCS),
-                                         CCS_relative=rescale(eset.high.corr.all_others$CCS_change.log2,to = c(0,100)))
-colData.heatmap.all_others$CCS <- factor(colData.heatmap.all_others$CCS,labels = c('Low','Inter','High'))
-colData.heatmap.all_others$corr.score.bin <- as.factor(ifelse(eset.high.corr.all_others$corr.score > cutpoint_C3,1,0))
-
-Data_col.heatmap.all_others = list('Cancer types'=c("ACC"="#C1A72F","BLCA"="#FAD2D9","LGG"="#D49DC7","GBM"="#D49DC7",
-                                                    "BRCA"="#ED2891","CESC"="#F6B667","COAD"="#9EDDF9","UCEC"="#FBE3C7",
-                                                    "ESCA"="#007EB5","HNSC"="#97D1A9","KICH"="#ED1C24","KIRC"="#ED1C24","KIRP"="#ED1C24","LIHC"="#CACCDB",
-                                                    "LUAD"="#D3C3E0","LUSC"="#D3C3E0","OV"="#D97D25","PAAD"="#6E7BA2","PRAD"="#7E1918","SKCM"="#BBD642",
-                                                    "STAD"="#00AEEF","THCA"="#F9ED32","UCS"="#F89420"),
-                                   Groups=c("Group 1"="tomato4","Group 2"='#F89420'),
-                                   'C3 score'=c('Low'='gray29','High'='gray87'),
-                                   'CCS relative'=CCS_relative.color,
-                                   CCS=c("Low"="Black","Inter"="gray","High"="gold"))
-
-exprs.data.all_others <- as.matrix(eset.high.corr.all_others)
+module.bp <- ggboxplot(data = melt(module.df),x ='Group',y='value',facet.by = 'Group',ggtheme = theme_few(),
+                       bxp.ERARrorbar = T,bxp.ERARrorbar.width = 0.08,ylab = 'Module score',size = 0.25,outlier.size=0.7,
+                       fill='Group',color='black',palette = c('skyblue1','yellow'))+
+    facet_grid(~variable,labeller = labeller(variable=new_labels))+
+    stat_compare_means(comparisons = list(c('G1','G2')),label = 'p.signif')+theme(legend.key.size = unit(1, 'cm'))+coord_cartesian(ylim = c(-4,4))
 
 #######
-colData.annot.all_others = HeatmapAnnotation('Cancer types' = colData.heatmap.all_others$Cancer.type,
-                                             'CCS relative'=colData.heatmap.all_others$CCS_relative,
-                                             'C3 score' =ifelse(colData.heatmap.all_others$corr.score.bin=='0','Low','High'),
-                                             col = Data_col.heatmap.all_others,show_legend =T,show_annotation_name = T,na_col='white',
-                                             annotation_legend_param = list('CCS relative' = list(
-                                                 title = "CCS relative",direction='horizontal',
-                                                 at = seq(0,100,by=10),
-                                                 labels = seq(0,100,by=10)),
-                                                 'Cancer types'=list(ncol=3,title='Cancer types')))
 
-### generating correlation bars (right annotations)
-corr.data.all_others <- merge(t(exprs(eset.high.corr.all_others)),pData(eset.high.corr.all_others)['CCS_change.log2'],by='row.names',sort=F)
-rownames(corr.data.all_others) <- corr.data.all_others$Row.names;corr.data.all_others <- corr.data.all_others[,-1]
-
-corrbar.all_others <- cor(corr.data.all_others[,-12],corr.data.all_others$CCS_change.log2,use = 'complete.obs')
-
-#### merge heatmaps into one figure
-### Figure 5A
-
-set.seed(1363)
-
-heatmap_list <- Heatmap(matrix = exprs.data.2group,name = 'log2(TPM+1)',border = T,cluster_rows = T,heatmap_legend_param = list(direction='horizontal'),
-                        cluster_columns = T,top_annotation = colData.annot.2group,row_names_gp = gpar(fontsize=10),row_dend_reorder = T,show_row_names = F,show_column_names = F,show_column_dend = T,
-                        column_names_gp = gpar(fontsize=6),column_title="Two groups") +
-    Heatmap(matrix = exprs.data.all_others,name = 'log2(TPM+1)',border = T,cluster_rows = T,heatmap_legend_param = list(direction='horizontal'),
-            cluster_columns = T,top_annotation = colData.annot.all_others,row_names_gp = gpar(fontsize=10),row_dend_reorder = T,show_row_names = T,show_column_names = F,show_column_dend = T,
-            right_annotation = rowAnnotation("Pearson's r"=anno_barplot(corrbar.all_others,border = T,width = unit(3,'cm'),
-                                                                        ylim = c(-0.3,0.5),which = 'row',baseline = 0,height = unit(1.5,'cm'),axis = T,bar_width = 0.8,
-                                                                        gp=gpar(border=NA,lty='blank',fill='skyblue3',color='skyblue3'))),
-            column_names_gp = gpar(fontsize=6),column_title="All-other cancer types")
-
-corr_heatmap <- draw(heatmap_list,
-                     column_title_gp = gpar(fontsize = 14,type='bold'),padding = unit(c(2, 8, 2, 2), "mm"),heatmap_legend_side = "bottom",annotation_legend_side='bottom')
-decorate_annotation("Pearson's r", {
-    grid.lines(c(0, 0), c(0.5, 11.5), gp = gpar(lty = 2),
-               default.units = "native")
-})
+Figure5A <- ggarrange(ER.PR.AR.bp+theme(axis.title.x = element_blank()),module.bp,common.legend = T,legend = 'none',ncol = 1)
 
 
-### selecting top 5 amp/del locations
-top_locs <- data.frame(chr=c('3q','1q','5p','6p','2p',
-                             '16q','8p','9q','22 (22q)','4q'),color=c(rep('firebrick3',5),rep('gold',5)))
-
-anneuploidy.score_sub <- anneuploidy.score %>% select(Sample,top_locs$chr)
-
-### generating matrix for the binary heatmap
-
-colData.heatmap <- data.frame(Cancer.type=as.character(eset.high.corr$twoClass.code),
-                              corr.score.bin=eset.high.corr$corr.score.bin,
-                              CCS_relative=rescale(eset.high.corr$CCS_change.log2,to=c(0,100)))
-
-rownames(colData.heatmap) <- colnames(eset.high.corr)
-
-Data_col.heatmap = list('Cancer types'=c("ACC"="#C1A72F","BLCA"="#FAD2D9","LGG"="#D49DC7","GBM"="#D49DC7",
-                                         "BRCA"="#ED2891","CESC"="#F6B667","COAD"="#9EDDF9","UCEC"="#FBE3C7",
-                                         "ESCA"="#007EB5","HNSC"="#97D1A9","KICH"="#ED1C24","KIRC"="#ED1C24","KIRP"="#ED1C24","LIHC"="#CACCDB",
-                                         "LUAD"="#D3C3E0","LUSC"="#D3C3E0","OV"="#D97D25","PAAD"="#6E7BA2","PRAD"="#7E1918","SKCM"="#BBD642",
-                                         "STAD"="#00AEEF","THCA"="#F9ED32","UCS"="#F89420"),
-                        Groups=c("Group 1"="tomato4","Group 2"='#F89420'),
-                        'C3 score'=c('Low'='gray29','High'='gray87'),
-                        'CCS relative'=CCS_relative.color,
-                        CCS=c("Low"="Black","Inter"="gray","High"="gold"))
+###########
 
 
-annu.matrix <- anneuploidy.score_sub;rownames(annu.matrix) <- anneuploidy.score_sub$Sample;annu.matrix <- annu.matrix[,-1]
-annu.matrix <- annu.matrix[which(rownames(annu.matrix)%in%rownames(colData.heatmap)),]
-colData.heatmap <- colData.heatmap[which(rownames(colData.heatmap)%in%rownames(annu.matrix)),]
-annu.matrix <- annu.matrix[rownames(colData.heatmap),]
-annu.matrix <- t(annu.matrix);annu.matrix <- as.matrix(annu.matrix)
+eSet.all.data <- eSet.final[rownames(eSet.final)%out%cc.Genes$hgnc_symbol,colnames(eSet.final)%in%c(colnames(eSet_CC.Group1.complete),colnames(eSet_CC.Group2.complete))]
+eSet.all.data$Group <- factor(ifelse(eSet.all.data$twoClass.code%in%c("CESC","OV","UCS"),'Group2','Group1'),levels=c('Group2','Group1'))
+eSet.all.data$twoClass.code <- factor(eSet.all.data$twoClass.code)
 
-### remove rows or columns with more than 50% missing
-annu.matrix <- annu.matrix[which(rowMeans(!is.na(annu.matrix)) > 0.5), which(colMeans(!is.na(annu.matrix)) > 0.5)]
-colData.heatmap <- colData.heatmap[colnames(annu.matrix),]
+exprs.data <- exprs(eSet.all.data)
+sample_annot <- pData(eSet.all.data)[c('twoClass.code','Group')]
+design.tb <- model.matrix(~sample_annot$Group+sample_annot$twoClass.code)
+fit <- lmFit(exprs.data,design.tb)
+fit <- eBayes(fit,robust=T,trend=T)
+limma.toptable <- topTable(fit = fit,sort.by =  'logFC',coef = 2,adjust.method = 'BH',number = Inf)
+ER.exprs <- exprs.data[rownames(exprs.data)=='ESR1',]
+AR.exprs <- exprs.data[rownames(exprs.data)=='AR',]
 
-colData.heatmap.annu.2group <- colData.heatmap[colData.heatmap$Cancer.type %in% c("HNSC", "KICH", "KIRP", "UCEC","CESC", "OV", "UCS"),]
-colData.annot.annu.2group = HeatmapAnnotation('Cancer types' = colData.heatmap.annu.2group$Cancer.type,
-                                              'CCS relative'=colData.heatmap.annu.2group$CCS_relative,
-                                              'C3 score'=ifelse(colData.heatmap.annu.2group$corr.score.bin=='0','Low','High'),
-                                              col = Data_col.heatmap,show_legend =T,show_annotation_name = F,na_col='white',
-                                              annotation_legend_param = list('CCS relative' = list(
-                                                  title = "CCS relative",direction='horizontal',
-                                                  at = seq(0,100,by=10),
-                                                  labels = seq(0,100,by=10)),
-                                                  'Cancer types'=list(ncol=3,title='Cancer types')))
-annu.matrix.2group <- annu.matrix[,rownames(colData.heatmap.annu.2group)]
+### adjusted for ER continuous = ER.exprs
+
+design.tb.ERAR <- model.matrix(~sample_annot$Group+sample_annot$twoClass.code+ER.exprs+AR.exprs)
+fit.ERAR <- lmFit(exprs.data,design.tb.ERAR)
+fit.ERAR <- eBayes(fit.ERAR,robust=T,trend=T)
+limma.toptable.ERAR <- topTable(fit = fit.ERAR,sort.by =  'logFC',coef = 2,adjust.method = 'BH',number = Inf)
+
+#######
+# Figure5D - GSEA - Pathway - MSIGDBR
+#######
+
+Hallmarks_db <- msigdbr(species = "Homo sapiens",category = c('H'))
+Hallmarks_list = split(x = Hallmarks_db$gene_symbol, f = Hallmarks_db$gs_name)
+
+### all genes + ER continuous
+
+tmp.all.ERAR.cont <- subset(limma.toptable.ERAR,subset=(limma.toptable.ERAR$adj.P.Val < 0.05&abs(limma.toptable.ERAR$logFC)>=2))
+tmp.all.ERAR.cont <- data.frame(GeneID=rownames(tmp.all.ERAR.cont),tmp.all.ERAR.cont)
+tmp.all.ERAR.cont$fcSign <- sign(tmp.all.ERAR.cont$logFC)
+tmp.all.ERAR.cont$logP <- -log10(tmp.all.ERAR.cont$P.Value)
+tmp.all.ERAR.cont$gRank <- tmp.all.ERAR.cont$logP/tmp.all.ERAR.cont$fcSign
+
+### handle the tie ranks
+set.seed(100)
+tmp.all.ERAR.cont <- tmp.all.ERAR.cont %>% arrange(desc(gRank))
+genes.all.ERAR.cont <- tmp.all.ERAR.cont$gRank
+names(genes.all.ERAR.cont) <- tmp.all.ERAR.cont$GeneID
+genes.all.ERAR.cont <- genes.all.ERAR.cont[!is.infinite(genes.all.ERAR.cont)]
+
+HM.all.ERAR.cont <- fgsea::fgseaMultilevel(pathways=Hallmarks_list,genes.all.ERAR.cont,maxSize =500,eps = 0,minSize = 5)
+
+# compare the correlation to CCS-relative score
+
+#######
+exprs.eSet.2group <- exprs(eSet.final[,eSet.final$twoClass.code%in%c('HNSC','KIRP','KICH','UCEC','CESC','OV','UCS')])
+# assayData: 25453 features, 1831 samples
+exprs.eSet.2group <- t(exprs.eSet.2group[rownames(exprs.eSet.2group) %in% tmp.all.ERAR.cont$GeneID,colnames(exprs.eSet.2group)%in%CCS_relative.df$rownames])
+
+cor.data.2group <- merge(CCS_relative.df[c('CCS_change','rownames')],exprs.eSet.2group,by.y='row.names',by.x='rownames')
+rownames(cor.data.2group) <- cor.data.2group$rownames;cor.data.2group <- cor.data.2group[,-1]
+vars = data.frame(v1=names(cor.data.2group)[1],v2=names(cor.data.2group)[-1])
+
+corrs.2group = do.call(rbind, mapply(corrFunc, vars[,1], vars[,2], MoreArgs=list(data=cor.data.2group),
+                                     SIMPLIFY=FALSE))
+corrs.2group <- corrs.2group[corrs.2group$p.value <0.05,]
+corrs.2group.order <- rbind(corrs.2group[order(corrs.2group$estimate),][1:10,],corrs.2group[order(corrs.2group$estimate,decreasing = T),][1:10,])[c('var2','estimate','p.value')]
+corrs.2group.order <- corrs.2group.order[order((corrs.2group.order$estimate)),]
+corrs.2group.order$var2 <- factor(corrs.2group.order$var2,levels = corrs.2group.order$var2)
+corrs.2group.order$Correlation <- as.factor(ifelse(corrs.2group.order$estimate>0,'Positive','Negative'))
+
+### other cancers
+
+exprs.eSet <- exprs(eSet.final[,eSet.final$twoClass.code%out%c('HNSC','KIRP','KICH','UCEC','CESC','OV','UCS')&eSet.final$twoType=='Tumour'])
+#assayData: 25453 features, 6307 samples
+
+exprs.eSet <- t(exprs.eSet[rownames(exprs.eSet) %in% as.character(corrs.2group.order$var2),colnames(exprs.eSet)%in%CCS_relative.df$rownames])
+
+cor.data <- merge(CCS_relative.df[c('CCS_change','rownames')],exprs.eSet,by.y='row.names',by.x='rownames')
+rownames(cor.data) <- cor.data$rownames;cor.data <- cor.data[,-1]
+vars = data.frame(v1=names(cor.data)[1],v2=names(cor.data)[-1])
+
+corrs = do.call(rbind, mapply(corrFunc, vars[,1], vars[,2], MoreArgs=list(data=cor.data),
+                              SIMPLIFY=FALSE))
+
+corrs.order <- rbind(corrs[order(corrs$estimate),][1:10,],corrs[order(corrs$estimate,decreasing = T),][1:10,])[c('var2','estimate','p.value')]
+corrs.order <- corrs.order[order((corrs.order$estimate)),]
+corrs.order$var2 <- factor(corrs.order$var2,levels = corrs.order$var2)
+corrs.order$Correlation <- as.factor(ifelse(corrs.order$estimate>0,'Positive','Negative'))
+
+tmp.pathway.ERAR <- HM.all.ERAR.cont
+tmp.pathway.ERAR$pathway <- gsub("HALLMARK_","",tmp.pathway.ERAR$pathway)
+tmp.pathway.ERAR$pathway <- gsub("_"," ",tmp.pathway.ERAR$pathway)
+tmp.pathway.ERAR$pathway <- str_to_title(tmp.pathway.ERAR$pathway)
+
+#######
+# labels on the volcano plot
+
+gene_labels <- unique(c("C19orf57","TCF19","ADRB2","NEFL","DNASE1L3",as.character(corrs.2group.order$var2),
+                        rownames(limma.toptable.ERAR[limma.toptable.ERAR$logFC>3&-log10(limma.toptable.ERAR$adj.P.Val)>10,]),
+                        rownames(limma.toptable.ERAR[limma.toptable.ERAR$logFC< -6.5&-log10(limma.toptable.ERAR$adj.P.Val)>100,])))
+options(ggrepel.max.overlaps = Inf)
+
+# Figure5B - volcano plot - DE analyses
+
+Figure5B <- EnhancedVolcano::EnhancedVolcano(limma.toptable.ERAR,
+                                                lab = rownames(limma.toptable.ERAR),
+                                                x = 'logFC',selectLab = gene_labels[c(1:10,40:length(gene_labels))],labFace = 'bold',
+                                                y = 'adj.P.Val',drawConnectors =T,labCol = 'black',boxedLabels = F,
+                                                title = 'Group 1 vs 2',subtitle ='',ylab = expression(-Log[10]~FDR),colConnectors = 'grey20',
+                                                pCutoff = 0.05,gridlines.major = F,gridlines.minor = F,widthConnectors = 0.1,
+                                                FCcutoff = 2,colAlpha = 0.6,axisLabSize = 13,titleLabSize = 11,
+                                                captionLabSize = 0,legendPosition = 'bottom',caption = '',
+                                                col=c('gray40','skyblue','palegreen4','firebrick3'),
+                                                pointSize = 2.0,legendLabels = c('NS',expression(Log[2]~FC),
+                                                                                 'FDR', expression(FDR~and~log[2]~FC)),cutoffLineCol = 'black',
+                                                labSize = 3)+ylim(0,250)+
+    geom_text(aes(x=6, y=240, label="Up-regulated in\nGroup 2"),size=4, color="black") +
+    geom_segment(x = 2, y = 210, xend = 10, yend =210,arrow = arrow(length = unit(0.01, "npc"), ends = 'last',type = 'closed'))+
+    geom_text(aes(x=-7, y=240, label="Down-regulated in\nGroup 2"),size=4, color="black") +
+    geom_segment(x = -2, y = 210, xend = -12, yend = 210,arrow = arrow(length = unit(0.01, "npc"), ends = "last",type = 'closed'))+
+    theme(plot.title = element_text(size = 18,hjust = c(0.5,0.5)))
 
 
-colData.heatmap <- colData.heatmap[rownames(colData.heatmap) %out% rownames(colData.heatmap.annu.2group),]
-annu.matrix <- annu.matrix[,colnames(annu.matrix) %out% rownames(colData.heatmap.annu.2group)]
+### Pathway enrichment analyses
 
-colData.annot = HeatmapAnnotation('Cancer types' = colData.heatmap$Cancer.type,
-                                  'CCS relative'=colData.heatmap$CCS_relative,
-                                  'C3 score'=ifelse(colData.heatmap$corr.score.bin=='0','Low','High'),
-                                  col = Data_col.heatmap,show_legend =T,show_annotation_name = T,na_col='white',
-                                  annotation_legend_param = list('CCS relative' = list(
-                                      title = "CCS relative",direction='horizontal',
-                                      at = seq(0,100,by=10),
-                                      labels = seq(0,100,by=10)),
-                                      'Cancer types'=list(ncol=3,title='Cancer types')))
+Figure5C <- ggplot(tmp.pathway.ERAR[order(tmp.pathway.ERAR$padj),][c(1:13,16,24)], aes(reorder(pathway, NES), -NES)) +
+    geom_col(aes(fill=padj<0.1)) +
+    coord_flip(xlim = c(-1,15) ) +
+    labs(x="Pathway", y="Normalized Enrichment Score",
+         title="Hallmark pathways",fill='FDR < 0.1') +
+    geom_text(aes(y=1.25, x=-0.8, label="Up-regulated in\nGroup 2"),size=4,color="black") +
+    geom_segment(y = 0.02, x = -0.1, yend = 2.5, xend = -0.1,arrow = arrow(length = unit(0.01, "npc"), ends = 'last',type = 'closed'))+
+    geom_text(aes(y=-0.75, x=-0.8, label="Down-regulated in\nGroup 2"),size=4, color="black") +
+    geom_segment(y= -0.02, x = -0.1, yend = -1.35, xend = -0.1,arrow = arrow(length = unit(0.01, "npc"), ends = "last",type = 'closed'))+
+    theme_few() + scale_fill_manual(values = c("slategray3","royalblue3"),breaks = c("FALSE","TRUE"),name="",labels=c("FDR > 0.1","FDR < 0.1"))+theme(legend.position=c(.85,.91),
+                                                                                                                                                      axis.text.y=element_text(size = 10,angle = 30,face = 'bold'),
+                                                                                                                                                      axis.text.x=element_text(size=12,face = 'bold'))
 
-row_split = data.frame(rep(c("Amplification", "Deletion"), each = 5))
+#### Correlation plots
 
-### generating correlation bars (right annotations)
-corr.data.annu.all_others <- merge(t(annu.matrix),pData(eset.high.corr.all_others)['CCS_change.log2'],by='row.names',sort=F)
-rownames(corr.data.annu.all_others) <- corr.data.annu.all_others$Row.names;corr.data.annu.all_others <- corr.data.annu.all_others[,-1]
-
-corrbar.annu.all_others <- cor(corr.data.annu.all_others[,-11],corr.data.annu.all_others$CCS_change.log2,use = 'complete.obs',method = 'kendall')
-
+corrs.2group.order$sig <- corrs.2group.order$p.value < 0.05
+colnames(corrs.2group.order)[5] <- 'p < 0.05'
 
 
+Figure5D <- ggbarplot(corrs.2group.order,x='var2',y='estimate',palette = c('darksalmon','darkorchid4'),ggtheme = theme_few(),title = '2 Groups (n = 1831)',
+                    fill='Correlation',xlab = 'Genes',ylab=paste0("Spearman's rank correlation (",'p',")"))+rotate_x_text(angle = 45)+theme(legend.position=c(.2,.9),axis.text.x=element_text(size=8.5,face = 'bold'))+
+    scale_color_manual(values = c('black','red'),breaks = c('TRUE','FALSE'))+coord_cartesian(ylim = c(-0.6,0.6))
 
+corrs.order$sig <- corrs.order$p.value < 0.05
+colnames(corrs.order)[5] <- 'p < 0.05'
 
-annu.heatmap_list <- Heatmap(matrix = annu.matrix.2group,col = structure(c('firebrick3','grey95','gold3','white'), names =c(1,0,-1,NA)),na_col = 'white',
-                             name = 'Status',border = T,cluster_rows = T,heatmap_legend_param = list(labels = c("Gain", "No-change", "Loss","Missing-data")),
-                             cluster_columns = T,top_annotation = colData.annot.annu.2group,row_split = row_split,row_names_gp = gpar(fontsize=10),row_dend_reorder = F,show_row_names = T,show_column_names = F,show_column_dend = T,
-                             column_names_gp = gpar(fontsize=6),column_title="Two groups") +
-    Heatmap(matrix = annu.matrix,col = structure(c('firebrick3','grey95','gold3','white'), names =c(1,0,-1,NA)),na_col = 'white',
-            name = 'Status',border = T,cluster_rows = T,heatmap_legend_param = list(labels = c("Gain", "No-change", "Loss","Missing-data")),
-            right_annotation = rowAnnotation("Kendall's tau"=anno_barplot(corrbar.annu.all_others,border = T,width = unit(2.5,'cm'),ylim = c(-0.1,0.05),which = 'row',baseline = 0,height = unit(1.5,'cm'),axis = T,bar_width = 0.8, gp=gpar(border=NA,lty='blank',fill='skyblue3',color='skyblue3'))),
-            cluster_columns = T,top_annotation = colData.annot,row_split = row_split,row_names_gp = gpar(fontsize=10),row_dend_reorder = F,show_row_names = T,show_column_names = F,show_column_dend = T,
-            column_names_gp = gpar(fontsize=6),column_title="All-other cancer types")
+Figure5E <- ggbarplot(corrs.order,x='var2',y='estimate',palette = c('darksalmon','darkorchid4'),ggtheme = theme_few(),title = 'Other cancers (n = 6307)',
+                    fill='Correlation',xlab = 'Genes',ylab='')+rotate_x_text(angle = 45)+theme(legend.position=c(.2,.9),axis.text.x=element_text(size=8.5,face = 'bold'))+
+    scale_color_manual(values = c('black','red'),breaks = c('TRUE','FALSE'))+ geom_hline(yintercept=0.3, linetype="dashed", color = "black")+coord_cartesian(ylim = c(-0.6,0.6))
 
 
 
-### Figure 5B
+##### Final figure 5
 
-
-annu_heatmap <- draw(annu.heatmap_list,
-                     column_title_gp = gpar(fontsize = 14,type='bold'),padding = unit(c(2, 8, 2, 2), "mm"),heatmap_legend_side = "bottom",annotation_legend_side='bottom')
-decorate_annotation("Kendall's tau", {
-    grid.lines(c(0, 0), c(-4.5, 0.45), gp = gpar(lty = 2),
-               default.units = "native")
-    grid.lines(c(0, 0), c(0.5, 5.5), gp = gpar(lty = 2),
-               default.units = "native")
-})
-
-
+Figure5 <- plot_grid(Figure5A+theme(legend.position = 'none'),
+                  Figure5B,
+                  Figure5C,
+                  Figure5D,
+                  Figure5E,ncol = 3,nrow=2,labels=c('A','B','C','D','E',''))
 

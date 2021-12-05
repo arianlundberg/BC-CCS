@@ -1,5 +1,5 @@
-load(file="~/manuscript_data.RData")
-source(file = "~/functions.R")
+load(file="~/Box Sync/Karolinska/Projects/CCS_2020/munge/Github/Gene.expression_data.RData")
+source(file="~/Box Sync/Karolinska/Projects/CCS_2020/munge/Github/functions.R")
 
 #######
 # Figure3A
@@ -71,7 +71,7 @@ Figure3A <-  ggplot(CCS_tissue.df, aes(x = twoClass.code, y = CCS_100, fill = pr
           axis.title.y.left=element_text(size=16,face = 'bold',colour = 'black'),
           axis.text.x=element_text(size=10,angle = 70,hjust = c(1,1)),axis.ticks.y = element_blank(),
           plot.margin = unit(c(0.5,0.5,0.7,0.5),'cm'),legend.position = 'top',
-          legend.key.size = unit(8, "mm"),legend.title = element_text(size = 10,face='bold')) +  stat_pvalue_manual(stat.test, label = "p.format",label.size = 3,
+          legend.key.size = unit(8, "mm"),legend.title = element_text(size = 10,face='bold')) +  stat_pvalue_manual(stat.test, label = "p.adj.signif",label.size = 3,
                                                                                                                     y.position = 1.05,step.group.by = 'primary_site_relevel',tip.length = 0,step.increase = -0.03)
 
 
@@ -84,89 +84,96 @@ rownames(pData(eSet.CCS.final)) <- eSet.CCS.final$Row.names;pData(eSet.CCS.final
 pData(eSet.CCS.final) <- pData(eSet.CCS.final)[order(eSet.CCS.final$id_order),]
 eSet.CCS.final$purity <- ifelse(is.na(eSet.CCS.final$purity)==T,1,eSet.CCS.final$purity)
 
-CCS_relative.df <- pData(eSet.CCS.final)[,c('primary_site_relevel','twoClass.code','twoType','tissue.colors','CCS','CCS_ct','purity')]
-CCS_relative.df$rownames <- rownames(CCS_relative.df)
+BC_CCS.df <- pData(eSet.CCS.final)[,c('primary_site_relevel','twoClass.code','twoType','tissue.colors','CCS','CCS_ct','purity')]
+BC_CCS.df$rownames <- rownames(BC_CCS.df)
 
 ### calculate the median value from normal tumours
-normal.median <- summaryBy(CCS_ct ~ primary_site_relevel,data = CCS_relative.df[CCS_relative.df$twoType=='Normal',],FUN=c(median))
-CCS_relative.df <- merge(CCS_relative.df[CCS_relative.df$twoType=='Tumour',],normal.median,by='primary_site_relevel',sort.x=F)
-CCS_relative.df$CCS_change <- (CCS_relative.df$CCS_ct-CCS_relative.df$CCS_ct.median)
+normal.median <- summaryBy(CCS_ct ~ primary_site_relevel,data = BC_CCS.df[BC_CCS.df$twoType=='Normal',],FUN=c(median))
+tumor.median <- summaryBy(CCS_ct ~ primary_site_relevel,data = BC_CCS.df[BC_CCS.df$twoType=='Tumour',],FUN=c(median))
 
-### adjust for tumour purity
+BC_CCS.df <- merge(BC_CCS.df[BC_CCS.df$twoType=='Tumour',],normal.median,by='primary_site_relevel',sort.x=F)
 
-CCS_relative.df$CCS_change <- CCS_relative.df$CCS_change * CCS_relative.df$purity
+### adjusting for tumour purity
 
-new.tumour.color <- merge(Tissue.color,unique(pData(eSet.CCS.final)[eSet.CCS.final$twoType=='Tumour',c('twoClass.code','tissue.colors')]),by='tissue.colors')
-new.tumour.color <- new.tumour.color[order(new.tumour.color$tissue),c('tissue','twoClass.code','tissue.colors')]
-new.tumour.color$twoClass.code <- factor(new.tumour.color$twoClass.code)
+BC_CCS.df$CCS_change <- (BC_CCS.df$CCS_ct-BC_CCS.df$CCS_ct.median)
+BC_CCS.df$CCS_change <- BC_CCS.df$CCS_change * BC_CCS.df$purity
+BC_CCS.df$twoClass.code <- factor(BC_CCS.df$twoClass.code, levels=new.tumour.color$twoClass.code)
 
-CCS_relative.df$twoClass.code <- factor(CCS_relative.df$twoClass.code, levels=new.tumour.color$twoClass.code)
-
-anatomy.male <- merge(Tissue.color,hgMale_key[hgMale_key$type %in% c('digestion','respiratory','reproductive'),],by='organ',sort=F)
-anatomy.male <- anatomy.male[anatomy.male$organ %out% c('testis','kidney'),]
-anatomy.male <- anatomy.male[,c("organ","type","tissue.colors","value")];colnames(anatomy.male)[3] <- 'colour'
-
-anatomy.female <- merge(Tissue.color,rbind(hgFemale_key[hgFemale_key$type %out% c('digestion','respiratory'),],hgFemale_key[hgFemale_key$organ=='kidney',]),by='organ',sort=F)
-anatomy.female <- anatomy.female[c("organ","type","tissue.colors","value")];colnames(anatomy.female)[3] <- 'colour'
-
-CCS_change.median <- summaryBy(CCS_change~primary_site_relevel,CCS_relative.df,FUN=c(median))
-CCS_change.median <- CCS_change.median[order(CCS_change.median$primary_site_relevel),]
-CCS_change.median$organ <- Tissue.color.noTestis$organ
-anatomy.female <- merge(anatomy.female,CCS_change.median[c('organ','CCS_change.median')],by='organ')
-anatomy.male <- merge(anatomy.male,CCS_change.median[c('organ','CCS_change.median')],by='organ')
-anatomy.male$value <- rescale(log2(anatomy.male$CCS_change.median),new.range=c(0,1))
-anatomy.female$value <- rescale(log2(anatomy.female$CCS_change.median),new.range=c(0,1))
-
-Figure3C1 <- gganatogram(data = anatomy.male[-18,],organism = 'human',sex='male',fillOutline = 'snow1',fill = 'value')+theme_void()+scale_fill_viridis(name='CCS change',option="cividis")
-Figure3C2 <- gganatogram(data = anatomy.female,organism = 'human',sex='female',fillOutline = 'snow1',fill = 'value')+theme_void()+scale_fill_viridis(name='CCS change',option="cividis")
-
-CCS_relative.df$CCS_change.log <- log2(CCS_relative.df$CCS_change)+1
-
-# PAN-kidney 3: "KICH", "KIRP", "KIRC"
-# PAN-Glioma 2: "GBM", "LGG"
-# PAN-Squaumous 8: "SKCM", "LUAD", "LUSC", "THCA", "HNSC","PRAD","BLCA","ACC"
-# PAN-GI 5: "ESCA","COAD", "STAD", "PAAD", "LIHC"
-# PAN-GYN 5: "BRCA","OV", "UCS", "CESC", "UCEC"
-
-Figure3B <- ggplot(CCS_relative.df, aes(y = (CCS_change.log), x = fct_reorder(twoClass.code,CCS_change,.fun =median,.desc = F), fill = twoClass.code)) +
+Figure3B <- ggplot(BC_CCS.df, aes(y = rescale(CCS_change,new.range=c(0,1)), x = reorder(twoClass.code, CCS_change, FUN = median), fill = twoClass.code)) +
     geom_boxplot(width=0.5,outlier.fill = NULL,outlier.size = NULL,show.legend = T,alpha=1,outlier.colour = NULL,outlier.alpha = 0,outlier.color = NULL,outlier.shape = NULL) +
     geom_jitter(width=0.1, show.legend = F,size=0.5,aes(color=twoClass.code,fill=twoClass.code)) +
     stat_boxplot(geom='errorbar',width=0.2)+
     geom_boxplot(width=0.5,outlier.fill = NULL,outlier.size = 3,show.legend = F,alpha=1,outlier.colour = NULL,outlier.alpha = 0,outlier.color = NULL,outlier.shape = NULL)  +
     geom_half_violin(side = "r",position = position_nudge(x=0.3))+
+    geom_segment(x = 1, y = 1.1, xend = 1, yend = 1.03,color='royalblue',linejoin='mitre',size=2,
+                 arrow = arrow(length = unit(0.025, "npc"), ends = "last",type = 'closed'))+
+    geom_segment(x = 2, y = 1.1, xend = 2, yend = 1.03,color='royalblue',linejoin='mitre',size=2,
+                 arrow = arrow(length = unit(0.025, "npc"), ends = "last",type = 'closed'))+
+    geom_segment(x = 3, y = 1.1, xend = 3, yend = 1.03,color='royalblue',linejoin='mitre',size=2,
+                 arrow = arrow(length = unit(0.025, "npc"), ends = "last",type = 'closed'))+
+    geom_segment(x = 5, y = 1.1, xend = 5, yend = 1.03,color='royalblue',linejoin='mitre',size=2,
+                 arrow = arrow(length = unit(0.025, "npc"), ends = "last",type = 'closed'))+
+    geom_segment(x = 21, y = 1.1, xend = 21, yend = 1.03,color='red',linejoin='mitre',size=2,
+                 arrow = arrow(length = unit(0.025, "npc"), ends = "last",type = 'closed'))+
+    geom_segment(x = 22, y = 1.1, xend = 22, yend = 1.03,color='red',linejoin='mitre',size=2,
+                 arrow = arrow(length = unit(0.025, "npc"), ends = "last",type = 'closed'))+
+    geom_segment(x = 23, y = 1.1, xend = 23, yend = 1.03,color='red',linejoin='mitre',size=2,
+                 arrow = arrow(length = unit(0.025, "npc"), ends = "last",type = 'closed'))+
+
     scale_fill_manual(values = new.tumour.color$tissue.colors,name='Cancer types',breaks = new.tumour.color$twoClass.code) +
     scale_color_manual(values = new.tumour.color$tissue.colors,name='Cancer types',breaks = new.tumour.color$twoClass.code)+
-    labs(y='Adjusted CCS change\n(log2)',title = 'Relative change of CCS',x='Cancer types') +
-    coord_cartesian(ylim=c(0,12)) +
+    labs(y='BC-CCS',title = 'Relative change of CCS',x='Cancer types') +
+    coord_cartesian(ylim=c(0,1.1)) +
     theme_cowplot()+
     theme(legend.key = element_rect(fill='white'),
           strip.text.y =element_text(size = 10,face='bold'),
-          axis.title.y = element_text(size = 16,face='bold'),
-          axis.title.x = element_text(size = 16,face='bold'),
-          plot.title = element_text(size = 17, face = "bold",hjust = c(0.5,0.5)),
+          axis.title.y = element_text(size = 22,face='bold'),
+          axis.title.x = element_text(size = 22,face='bold'),
+          plot.title = element_text(size = 24, face = "bold",hjust = c(0.5,0.5)),
           plot.subtitle = element_text(size = 12,hjust = c(0.5,0.5)),
           panel.background = element_blank(),
-          axis.line = element_line(colour = "black"),axis.text.x=element_text(angle = 45,hjust = c(1,1)),
+          axis.line = element_line(colour = "black"),axis.text.x=element_text(size = 20,angle = 45,hjust = c(1,1)),
           axis.text.y=element_text(size=20),
           legend.key.size = unit(8, "mm"),legend.title = element_text(size = 10,face='bold'))
 
 
-Figure3C <- plot_grid(Figure3C1+theme(legend.position = 'none'),Figure3C2+theme(legend.position = 'none'),ncol = 2)
-Figure3B.C <- plot_grid(Figure3B+theme(legend.position = 'none'),Figure3C,ncol=2,rel_widths = c(1.5,0.5),align = 'hv',label_size = 20,labels = c('B','C'))
+median.df <- data.frame(Type=as.character(tumor.median$primary_site_relevel),Normal=rescale(normal.median$CCS_ct.median,c(0,1)),
+                        Tumour=rescale(tumor.median$CCS_ct.median,c(0,1)))
+
+Figure3C <- ggplot(median.df, aes(x = Normal, y = Tumour, label = Type,fill=Type,color=Type)) +
+    stat_cor(size=6,label.x = 1,label.y=1,method = 'spearman',label.sep = '\t',label.y.npc = 'top',p.accuracy = 0.001)+
+    geom_vline(xintercept = 0.5,linetype = "dashed") +
+    geom_hline(yintercept = 0.5,linetype = "dashed") +
+    geom_point(aes(color=Type), size = 7,shape=21) +
+    geom_text_repel(size = 5,nudge_y = +0.04,colour='black',fontface='bold',max.overlaps = 2,segment.color=NA)+
+    scale_fill_manual(values = Tissue.color$tissue.colors,name='Tissue type',breaks = Tissue.color$tissue, expand = c(0, 0))+
+    scale_color_manual(values = rep('black',20),name='Tissue type',breaks = Tissue.color$tissue, expand = c(0, 0)) +
+
+    scale_x_continuous(sec.axis = dup_axis(breaks = c(0.25,0.75),name = "",
+                                           labels=c("0.25" = "Low", "0.75" = "High"))) +
+    scale_y_continuous(sec.axis = dup_axis(breaks = c(0.25,0.75),name = "",
+                                           labels=c("2" = "Low", "8" = "High"))) +
+    theme_few(base_size = 22)+
+    labs(y='Median CCS - Tumours',x='Median CCS - Normals') +theme(legend.position = 'none',axis.text.y.right = element_text(angle = -90),
+                                                                   axis.ticks.y.right = element_blank(),axis.ticks.x.top = element_blank(),
+                                                                   axis.title.x = element_text(size = 22,face='bold'),
+                                                                   axis.title.y = element_text(size = 22,face='bold'),
+                                                                   axis.text= element_text(size = 20,face='bold'))
+
+
+
 Figure3.legends <- plot_grid(get_legend(Figure3A+guides(fill = guide_legend(nrow = 2))+
                                             theme(legend.position = 'bottom',legend.title =element_text(size = 20,face='bold'),
-                                                  legend.key.size = unit(1.5,'cm'),legend.text =element_text(size = 12))),
-                             NULL,
-                             get_legend(Figure3C1+
-                                            theme(legend.position = 'bottom',legend.title =element_text(size = 20,face='bold'),
-                                                  legend.key.size = unit(1,'cm'),legend.text =element_text(size = 12))),nrow=1,rel_widths = c(1,0.3,0.5))
+                                                  legend.key.size = unit(2,'cm'),legend.text =element_text(size = 15))),nrow = 1,rel_widths = c(1.3,0.7))
+
+Figure3.BC <- plot_grid(Figure3B+theme(legend.position = 'none'),NULL,
+                        Figure3C+theme(legend.position = 'none'),ncol=3,align = 'hv',rel_widths = c(1.5,0.01,0.8),labels=c('B','','C'),label_size = 20,scale=c(1,0.8))
 
 
-### Final Figure3
+#### FIGURE 3.
 
 Figure3 <- plot_grid(Figure3A+theme(legend.position = 'none'),
-                     Figure3.legends,
-                     Figure3B.C,
-                     label_size = 20,labels=c('A','',''),
-                     ncol = 1,nrow=3,align = 'h',axis='lr',rel_heights = c(1,0.3,1))
+                     Figure3.BC,
+                     Figure3.legends,label_size = 20,labels=c('A','',''),
+                     ncol = 1,nrow=3,align = 'h',axis='lr',rel_heights = c(1,1,0.2))
 
