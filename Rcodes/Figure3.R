@@ -1,5 +1,5 @@
-load(file="~/Box Sync/Karolinska/Projects/CCS_2020/munge/Github/Gene.expression_data.RData")
-source(file="~/Box Sync/Karolinska/Projects/CCS_2020/munge/Github/functions.R")
+load(file="~/Rcodes/Gene.expression_data.RData")
+source(file="~/Rcodes/functions.R")
 
 #######
 # Figure3A
