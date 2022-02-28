@@ -1,7 +1,7 @@
 # BC-CCS
 
 ## "Reclassifying Cancer: Defining tumour cell cycle activity in terms of its tissue of origin in over 13,000 samples" 
-### Link to the manuscript Lundberg et al.
+### https://doi.org/10.1101/2022.02.15.480623 (bioRxiv).
 
 ### Written by ARIAN LUNDBERG 
 
@@ -28,7 +28,7 @@ also PAM50 subtypes: retrieved from cBioportal
 
 ### Contact info
 
-Please contact Arian Lundberg: **arian.lundberg@ucsf.edu** if you have any furthur questions. 
+Please contact via **arian.lundberg@ucsf.edu** if you have any furthur questions. 
 
 Sincerely,
 Arian Lundberg
